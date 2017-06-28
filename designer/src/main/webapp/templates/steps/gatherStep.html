@@ -38,34 +38,68 @@
 						<!-- <input type="radio" ng-model="step.gatherType" value="custom"> Custom -->
 					</div>
 					<div ng-if="step.gatherType=='menu'">
-						<div ng-repeat="mapping in step.menu.mappings" class='form-group row'>
-							<form name="form" novalidate>
-								<div class='col-md-4'>
+						<div ng-show="step.inputType != 'speech'">
+							{{'gatherStepDigitsMappingTitle' | translate}}
+							<div ng-repeat="mapping in step.menu.mappings" class='form-group row'>
+								<form name="form" novalidate>
+									<div class='col-md-4'>
 
-									<div class="input-group input-group-sm">
-										<span class="input-group-addon">{{'gatherStepDigitLabel' | translate}}</span>
-										<input name="digits" class="form-control ng-pristine ng-valid ng-valid-pattern" type="text" placeholder="{{'gatherStepDigitInputPlaceholder' | translate}}" ng-pattern="/^[0-9*#ABCD]+$/" ng-model='mapping.digits' required title="{{'gatherStepDigitTooltip' | translate}}"></input>
+										<div class="input-group input-group-sm">
+											<span class="input-group-addon">{{'gatherStepDigitLabel' | translate}}</span>
+											<input name="key" class="form-control ng-pristine ng-valid ng-valid-pattern" type="text" placeholder="{{'gatherStepDigitInputPlaceholder' | translate}}" ng-pattern="/^[0-9*#ABCD]+$/" ng-model='mapping.key' required title="{{'gatherStepDigitTooltip' | translate}}"></input>
+										</div>
+										<div class="validation-error"  ng-show="form.key.$invalid">{{'gatherStepDigitValidationErrorLabel' | translate}}</div>
+
+
 									</div>
-									<div class="validation-error"  ng-show="form.digits.$invalid">{{'gatherStepDigitValidationErrorLabel' | translate}}</div>
-
-
-								</div>
-								<div class='col-md-6'>
-									<div class="input-group input-group-sm">
-										<span class="input-group-addon">{{'gatherStepTargetLabel' | translate}}</span>
-										<select sync-model name="next" ng-model='mapping.next' ng-options='target.name as target.label for target in getAllTargets()' class="form-control input-sm" required>
-											<option value=""></option>
-										</select>
+									<div class='col-md-6'>
+										<div class="input-group input-group-sm">
+											<span class="input-group-addon">{{'gatherStepTargetLabel' | translate}}</span>
+											<select sync-model name="next" ng-model='mapping.next' ng-options='target.name as target.label for target in getAllTargets()' class="form-control input-sm" required>
+												<option value=""></option>
+											</select>
+										</div>
+										<div class="validation-error" ng-show="form.next.$invalid">{{'gatherStepNoTargetLabel' | translate}}</div>
 									</div>
-									<div class="validation-error" ng-show="form.next.$invalid">{{'gatherStepNoTargetLabel' | translate}}</div>
-								</div>
-								<div class='col-md-1'>
-									<button ng-click="removeGatherMapping(step,mapping)" type="button" class="close" aria-hidden="true">&times;</button>
-								</div>
-							</form>
+									<div class='col-md-1'>
+										<button ng-click="removeGatherMapping(step,mapping)" type="button" class="close" aria-hidden="true">&times;</button>
+									</div>
+								</form>
+							</div>
+							<div class="form-group">
+								<button ng-click="addGatherMapping(step)" type="button" class="btn btn-primary btn-xs"><span>{{'gatherStepAddMappingButton' | translate}}</span></button>
+							</div>
 						</div>
-						<div class="form-group">
-							<button ng-click="addGatherMapping(step)" type="button" class="btn btn-primary btn-xs"><span>{{'gatherStepAddMappingButton' | translate}}</span></button>
+						<div ng-show="step.inputType!='dtmf'">
+							{{'gatherStepSpeechMappingTitle' | translate}}
+							<div ng-repeat="mapping in step.menu.speechMapping" class='form-group row'>
+								<form name="form" novalidate>
+									<div class="container-fluid">
+										<div>
+											<div class="input-group input-group-sm">
+												<span class="input-group-addon">{{'gatherStepSpeechOptionLabel' | translate}}</span>
+												<input name="key" class="form-control ng-pristine ng-valid" type="text" placeholder="{{'gatherStepSpeechInputPlaceholder' | translate}}" ng-model='mapping.key' required title=""></input>
+											</div>
+											<div class="validation-error"  ng-show="form.key.$invalid">{{'gatherStepDigitValidationErrorLabel' | translate}}</div>
+										</div>
+										<div>
+											<div class="input-group input-group-sm">
+												<span class="input-group-addon">{{'gatherStepTargetLabel' | translate}}</span>
+												<select sync-model name="next" ng-model='mapping.next' ng-options='target.name as target.label for target in getAllTargets()' class="form-control input-sm" required>
+													<option value=""></option>
+												</select>
+											</div>
+											<div class="validation-error" ng-show="form.next.$invalid">{{'gatherStepNoTargetLabel' | translate}}</div>
+										</div>
+										<div class='col-md-1'>
+											<button ng-click="removeSpeechGatherMapping(step,mapping)" type="button" class="close" aria-hidden="true">&times;</button>
+										</div>
+									</div>
+								</form>
+							</div>
+							<div class="form-group">
+								<button ng-click="addSpeechGatherMapping(step)" type="button" class="btn btn-primary btn-xs"><span>{{'gatherStepAddMappingButton' | translate}}</span></button>
+							</div>
 						</div>
 					</div>
 					<div ng-if="step.gatherType=='collectdigits'">
@@ -98,7 +132,6 @@
 							</div>
 						</form>
 					</div>
-
 					<div>
 						<h4>{{'gatherStepValidationLabel' | translate}}</h4>
 						<div ng-show="step.gatherType=='collectdigits'" class="form-group">
@@ -154,17 +187,26 @@
 		<br/>
 		<i ng-click="step.iface.optionsVisible = !step.iface.optionsVisible" class='fa fa-cog rvd-clickable' ng-class="{'rvd-active': step.iface.optionsVisible }"></i>
 		<div ng-show="step.iface.optionsVisible">
-			<div class='row'>
-				<br/>
+			<div class="row">
+				<div class="col-lg-3">
+					<input type="radio" ng-model="step.inputType" value="dtmf"> {{'gatherStepInputDtmf' | translate}}
+					<input type="radio" ng-model="step.inputType" value="speech"> {{'gatherStepInputSpeech' | translate}}
+					<input type="radio" ng-model="step.inputType" value="speech_dtmf"> {{'gatherStepInputDtmfSpeech' | translate}}
+				</div>
+			</div>
+			<div class="row">
 				<!--
                 <div class="form-group col-lg-3">
                     <label for="gatherTimeout">Timeout</label>
                     <input ng-model='step.timeout' type="number" id="gatherTimeout" class="form-control" placeholder="5" tooltip-placement='left' tooltip='Time (in seconds) to wait for the caller to press another digit'>
                 </div>
                 -->
-				<div class="col-lg-3 input-group input-group-sm">
+				<div class="col-lg-3">
+					<div class="input-group input-group-sm">
 					<span class="input-group-addon">{{'gatherStepFinishLabel' | translate}}</span>
 					<input ng-model='step.finishOnKey' auto-clear ng-pattern='/^[0-9\#\*]$/' type="text" class="form-control" placeholder="{{'gatherStepFinishPlaceholder' | translate}}">
+
+					</div>
 				</div>
 
 				<!--
@@ -173,7 +215,7 @@
                     <input ng-model='step.finishOnKey' id='finishOnKey' type='text' ng-pattern='/^[0-9\#\*]$/' class='form-control' tooltip="The 'finishOnKey' attribute lets you choose one value that submits the received data when entered. For example, if you set 'finishOnKey' to '#' and the user enters '1234#'">
                 </div>
                 -->
-				<div class="col-lg-3">
+				<div class="col-lg-3" ng-show="step.inputType != 'speech'">
 					<div class="input-group input-group-sm">
 						<span class="input-group-addon">{{'gatherStepNumberDigitsLabel' | translate}}</span>
 						<input ng-model='step.numDigits' auto-clear ng-pattern='/^[0-9\#\*]{1,2}$/' type="number" class="form-control" placeholder="{{'gatherStepNumberDigitsPlaceholder' | translate}}"/>

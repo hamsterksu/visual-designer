@@ -116,9 +116,15 @@ var designerCtrl = App.controller('designerCtrl', function($scope, $q, $statePar
 	$scope.addGatherMapping = function( gatherStep ) {
 		gatherStep.menu.mappings.push({digits:"", next:""});
 	};
+	$scope.addSpeechGatherMapping = function( gatherStep ) {
+        gatherStep.menu.speechMapping.push({digits:"", next:""});
+    };
 	$scope.removeGatherMapping = function (gatherStep, mapping) {
 		gatherStep.menu.mappings.splice( gatherStep.menu.mappings.indexOf(mapping), 1 );
 	}
+	$scope.removeSpeechGatherMapping = function (gatherStep, mapping) {
+        gatherStep.menu.speechMapping.splice( gatherStep.menu.speechMapping.indexOf(mapping), 1 );
+    }
 	// ussd collect handles adding mappings a little differently
 	$scope.addUssdCollectMapping = function (collectStep) {
 		collectStep.menu.mappings.push({digits:"", next:""});
@@ -307,6 +313,8 @@ var designerCtrl = App.controller('designerCtrl', function($scope, $q, $statePar
 			        $scope.drawGraph();
 				if ( reason.exception.className == 'ValidationException' ) {
 					console.log("Validation error");
+					console.log(reason.exception);
+
 					notifications.put({type:"warning", message:"Project saved with validation errors"});
 					var r = /^\/nodes\/([0-9]+)\/steps\/([0-9]+)$/;
 					var errorItems = reason.exception.jsonSchemaReport.errorItems;

@@ -310,6 +310,13 @@
 	"gatherStepNumberDigitsPlaceholder": "123",
 	"gatherStepNumberOfDigitsConflictWarning": "value may conflict with <strong>Number of digits</strong>",
 	"gatherStepValidationConflictWarning": "value may conflict with <strong>Validation pattern</strong>",
+	"gatherStepInputDtmf": "DTMF",
+	"gatherStepInputSpeech": "Speech",
+	"gatherStepInputDtmfSpeech": "DTMF and Speech",
+	"gatherStepDigitsMappingTitle": "Digits mapping",
+	"gatherStepSpeechMappingTitle": "Speech mapping",
+	"gatherStepSpeechOptionLabel": "Text",
+	"gatherStepSpeechInputPlaceholder": "some text",
 
 	"homeStartLabel": "Start a new project",
 	"homeVoiceLabel": "Voice",

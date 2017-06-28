@@ -23,6 +23,7 @@
 			}
 		},
 		"gatherType": {"enum": ["menu","collectdigits"]},
+		"inputType": {"enum": ["dtmf","speech", "dtmf_speech"]},
 		"menu": {
 			"type": "object",
 			"properties": {
@@ -31,16 +32,29 @@
 					"items": {
 						"type": "object",
 						"properties": {
-							"digits": {"type": "string","minLength":1},
+							"key": {"type": "string","minLength":1},
 							"next": {"type": "string","minLength":1},
 							"scope": {"type": "string"}
 						},
-						"required":["digits","next"]
+						"required":["key","next"]
 					},
-					"minItems": 1
+					"minItems": 0
+				},
+				"speechMapping": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"key": {"type": "string","minLength":1},
+							"next": {"type": "string","minLength":1},
+							"scope": {"type": "string"}
+						},
+						"required":["key","next"]
+					},
+					"minItems": 0
 				}
 			},
-			"required":["mappings"]
+			"required":["mappings", "speechMapping"]
 		},
 		"collectdigits": {
 			"type": "object",
