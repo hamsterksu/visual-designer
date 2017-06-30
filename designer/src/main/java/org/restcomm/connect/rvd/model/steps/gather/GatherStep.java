@@ -19,13 +19,8 @@
 
 package org.restcomm.connect.rvd.model.steps.gather;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Level;
-
 import org.restcomm.connect.rvd.RvdConfiguration;
 import org.restcomm.connect.rvd.exceptions.InterpreterException;
 import org.restcomm.connect.rvd.interpreter.Interpreter;
@@ -35,6 +30,11 @@ import org.restcomm.connect.rvd.logging.system.LoggingHelper;
 import org.restcomm.connect.rvd.logging.system.RvdLoggers;
 import org.restcomm.connect.rvd.model.client.Step;
 import org.restcomm.connect.rvd.storage.exceptions.StorageException;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @author otsakir@gmail.com - Orestis Tsakiridis
@@ -65,8 +65,11 @@ public class GatherStep extends Step {
     private Step invalidMessage;
     private Menu menu;
     private Collectdigits collectdigits;
+    private Collectdigits collectspeech;
     private String gatherType;
     private String inputType;
+    private String hints;
+    private String language;
 
     public final class Menu {
         private List<Mapping> mappings;
@@ -103,12 +106,8 @@ public class GatherStep extends Step {
             rcmlStep.setFinishOnKey(finishOnKey);
         rcmlStep.setMethod(method);
         rcmlStep.setNumDigits(numDigits);
-
-        //TODO implement it
-        rcmlStep.setHints("");
-        //TODO implement it
-        rcmlStep.setLanguage("");
-
+        rcmlStep.setHints(hints);
+        rcmlStep.setLanguage(language);
         rcmlStep.setInput(inputType);
         rcmlStep.setPartialResultCallback(action);
         rcmlStep.setPartialResultCallbackMethod(method);
@@ -119,14 +118,14 @@ public class GatherStep extends Step {
         return rcmlStep;
     }
 
-    private boolean handleMaping(Interpreter interpreter, Target originTarget, String key, List<Mapping> mappings) throws StorageException, InterpreterException {
+    private boolean handleMaping(Interpreter interpreter, Target originTarget, String key, List<Mapping> mappings, boolean isPattern) throws StorageException, InterpreterException {
         LoggingContext logging = interpreter.getRvdContext().logging;
         for (Mapping mapping : mappings) {
 
             if (RvdLoggers.local.isTraceEnabled())
                 RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", "{0} checking key: {1} - {2}", new Object[]{logging.getPrefix(), mapping.key, key}));
 
-            if (mapping.key != null && mapping.key.equals(key)) {
+            if (mapping.key != null && (!isPattern && mapping.key.equals(key) || isPattern && Pattern.matches(mapping.key, key))) {
                 // seems we found out menu selection
                 if (RvdLoggers.local.isTraceEnabled())
                     RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), " seems we found our menu selection: " + key));
@@ -156,25 +155,25 @@ public class GatherStep extends Step {
             boolean handled = false;
             switch (InputType.parse(inputType)) {
                 case DTMF:
-                    handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings);
+                    handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings, false);
                     break;
                 case SPEECH:
-                    handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping);
+                    handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping, true);
                     break;
                 case DTMF_SPEECH:
                     if (!StringUtils.isEmpty(digitsString)) {
-                        handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings);
+                        handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings, false);
                     } else if (!StringUtils.isEmpty(speechString)) {
-                        handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping);
+                        handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping, true);
                     }
                     break;
             }
             if (!handled)
                 valid = false;
         } else if ("collectdigits".equals(gatherType)) {
-            //TODO implement speech support !!!
             String variableName = collectdigits.collectVariable;
-            String variableValue = interpreter.getRequestParams().getFirst("Digits");
+            String currentSpeechValue = interpreter.getVariables().get(collectdigits.scope + "_" + variableName);
+            String variableValue = !InputType.parse(inputType).equals(InputType.DTMF) && StringUtils.isEmpty(digitsString) ? currentSpeechValue + " " + speechString : digitsString;
             if (variableValue == null) {
 
                 RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Digits' parameter was null. Is this a valid restcomm request?"));
