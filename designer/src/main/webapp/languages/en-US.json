@@ -311,6 +311,7 @@
 	"gatherStepNumberOfDigitsConflictWarning": "value may conflict with <strong>Number of digits</strong>",
 	"gatherStepValidationConflictWarning": "value may conflict with <strong>Validation pattern</strong>",
 	"gatherStepHotWordsTextArea": "Hot words",
+	"gatherStepRuleForHotWords": "Use ',' as separator between Hot words",
 	"gatherStepDtmfInput": "DTMF",
 	"gatherStepSpeechInput": "Speech",
 	"gatherStepDtmfSpeechInput": "DTMF and Speech",

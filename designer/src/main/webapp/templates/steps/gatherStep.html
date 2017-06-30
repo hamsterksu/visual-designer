@@ -132,7 +132,7 @@
 						</form>
 					</div>
 
-					<div ng-if="step.gatherType=='collectspeech'">
+					<div ng-if="step.gatherType=='collectdigits'">
 						<form name="form" novalidate>
 							<div class='form-group row'>
 								<div class='col-md-12'>
@@ -240,7 +240,7 @@
 
 			<div class="row" ng-show="step.inputType != 'dtmf'">
 				<h4>{{'gatherStepHotWordsTextArea' | translate}}</h4>
-				<textarea ng-model='step.invalidMessage.phrase' type="text" class="form-control" placeholder="{{'gatherStepSayInvalidPlaceholder' | translate}}"></textarea>
+				<textarea ng-model='step.text' type="text" class="form-control" placeholder="{{'gatherStepRuleForHotWords' | translate}}"></textarea>
 			</div>
 
 			<div class="row">
