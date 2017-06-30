@@ -1,4 +1,3 @@
-
 <div gather-step class="step step-gather panel panel-default step-{{step.name}}">
 	<div class="panel-heading">
 		<step-heading></step-heading>		</div>
@@ -132,6 +131,39 @@
 							</div>
 						</form>
 					</div>
+
+					<div ng-if="step.gatherType=='collectspeech'">
+						<form name="form" novalidate>
+							<div class='form-group row'>
+								<div class='col-md-12'>
+									<div class="input-group">
+										<span class="input-group-addon">{{'gatherStepAssignToLabel' | translate}}</span>
+										<input rvd-variable='step.collectspeech.collectVariable' ng-model="step.collectspeech.collectVariable" ng-pattern="/^[A-Za-z]+[A-Za-z0-9_]*$/" name='collectVariable' class="form-control ng-pristine ng-valid ng-valid-pattern" type="text" placeholder="{{'gatherStepAssignToInputPlaceholder' | translate}}"   required></input>
+										<span class="input-group-addon">{{'gatherStepScopeLabel' | translate}}</span>
+										<select ng-model='step.collectspeech.scope' class="form-control">
+											<option value='module'>{{'gatherStepScopeSelectOption1' | translate}}</option>
+											<option value='application'>{{'gatherStepScopeSelectOption2' | translate}}</option>
+										</select>
+									</div>
+									<div class="validation-error" ng-show="form.collectVariable.$invalid">{{'gatherStepInvalidVariableErrorLabel' | translate}}</div>
+								</div>
+							</div>
+							<div class='form-group row'>
+								<div class='col-md-12'>
+									<div class="input-group">
+										<span class="input-group-addon">{{'gatherStepContinueToLabel' | translate}}</span>
+										<select sync-model name='next' ng-model='step.collectspeech.next' ng-options='target.name as target.label for target in getAllTargets()' required class="form-control">
+											<option value=""></option>
+										</select>
+									</div>
+									<div class="validation-error" ng-show="form.next.$invalid">{{'gatherStepChooseTargetLabel' | translate}}</div>
+								</div>
+
+							</div>
+						</form>
+					</div>
+
+
 					<div>
 						<h4>{{'gatherStepValidationLabel' | translate}}</h4>
 						<div ng-show="step.gatherType=='collectdigits'" class="form-group">
@@ -188,12 +220,29 @@
 		<i ng-click="step.iface.optionsVisible = !step.iface.optionsVisible" class='fa fa-cog rvd-clickable' ng-class="{'rvd-active': step.iface.optionsVisible }"></i>
 		<div ng-show="step.iface.optionsVisible">
 			<div class="row">
-				<div class="col-lg-3">
-					<input type="radio" ng-model="step.inputType" value="dtmf"> {{'gatherStepInputDtmf' | translate}}
-					<input type="radio" ng-model="step.inputType" value="speech"> {{'gatherStepInputSpeech' | translate}}
-					<input type="radio" ng-model="step.inputType" value="speech_dtmf"> {{'gatherStepInputDtmfSpeech' | translate}}
+				<div class="input-type-box">
+				<!--<div class="col-lg-3">-->
+					<input type="radio" ng-model="step.inputType" value="dtmf">{{'gatherStepDtmfInput' | translate}}
+					<input type="radio" ng-model="step.inputType" value="speech">{{'gatherStepSpeechInput' | translate}}
+					<input type="radio" ng-model="step.inputType" value="speech_dtmf">{{'gatherStepDtmfSpeechInput' | translate}}
+				<!--</div>-->
 				</div>
 			</div>
+
+			<div class="row" ng-show="step.inputType != 'dtmf'">
+				<div class="col-lg-5  form-group input-group language">
+					<span class="input-group-addon ">{{'sayStepLanguageLabel' | translate}}</span>
+					<select ng-model='step.languagesGather' auto-clear ng-options='language.name as language.text for language in languages'  id="languageSelect" class="form-control say-language-dropdown" >
+						<option value=""></option>
+					</select>
+				</div>
+			</div>
+
+			<div class="row" ng-show="step.inputType != 'dtmf'">
+				<h4>{{'gatherStepHotWordsTextArea' | translate}}</h4>
+				<textarea ng-model='step.invalidMessage.phrase' type="text" class="form-control" placeholder="{{'gatherStepSayInvalidPlaceholder' | translate}}"></textarea>
+			</div>
+
 			<div class="row">
 				<!--
                 <div class="form-group col-lg-3">
