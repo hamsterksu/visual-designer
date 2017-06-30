@@ -180,6 +180,15 @@ var designerCtrl = App.controller('designerCtrl', function($scope, $q, $statePar
 											{name:'th',text: 'Thai'},
 											{name:'tr',text: 'Turkish'}
 										 ];
+	$scope.languagesGather = [
+		{name:'en-gb',text: 'British-English'},
+		{name:'en',text:'English'},
+		{name:'es',text: 'Spanish'},
+		{name:'fr',text: 'French'},
+		{name:'it',text: 'Italian'},
+		{name:'pl',text: 'Polish'},
+		{name:'pt',text: 'Portuguese'}
+	];
 	$scope.methods = ['POST', 'GET'];
 
 	$scope.ussdMaxEnglishChars = 182;
