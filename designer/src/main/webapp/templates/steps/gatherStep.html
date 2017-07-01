@@ -101,6 +101,8 @@
 							</div>
 						</div>
 					</div>
+
+					<!-- gatherType=='collectdigits' and step=='collectdigits' -->
 					<div ng-if="step.gatherType=='collectdigits'">
 						<form name="form" novalidate>
 							<div class='form-group row'>
@@ -132,6 +134,7 @@
 						</form>
 					</div>
 
+					<!-- gatherType=='collectdigits' and step=='collectspeech' -->
 					<div ng-if="step.gatherType=='collectdigits'">
 						<form name="form" novalidate>
 							<div class='form-group row'>
@@ -162,7 +165,6 @@
 							</div>
 						</form>
 					</div>
-
 
 					<div>
 						<h4>{{'gatherStepValidationLabel' | translate}}</h4>
@@ -220,27 +222,25 @@
 		<i ng-click="step.iface.optionsVisible = !step.iface.optionsVisible" class='fa fa-cog rvd-clickable' ng-class="{'rvd-active': step.iface.optionsVisible }"></i>
 		<div ng-show="step.iface.optionsVisible">
 			<div class="row">
-				<div class="input-type-box">
-				<!--<div class="col-lg-3">-->
+				<div class="asr-input-type-box">
 					<input type="radio" ng-model="step.inputType" value="dtmf">{{'gatherStepDtmfInput' | translate}}
 					<input type="radio" ng-model="step.inputType" value="speech">{{'gatherStepSpeechInput' | translate}}
 					<input type="radio" ng-model="step.inputType" value="speech_dtmf">{{'gatherStepDtmfSpeechInput' | translate}}
-				<!--</div>-->
 				</div>
 			</div>
 
 			<div class="row" ng-show="step.inputType != 'dtmf'">
-				<div class="col-lg-5  form-group input-group language">
+				<div class="col-lg-5  form-group input-group language asr-collect">
 					<span class="input-group-addon ">{{'sayStepLanguageLabel' | translate}}</span>
-					<select ng-model='step.languagesGather' auto-clear ng-options='language.name as language.text for language in languages'  id="languageSelect" class="form-control say-language-dropdown" >
+					<select ng-model='step.language' auto-clear ng-options='language.name as language.text for language in languagesGather'  id="languageSelect" class="form-control say-language-dropdown" >
 						<option value=""></option>
 					</select>
 				</div>
 			</div>
 
-			<div class="row" ng-show="step.inputType != 'dtmf'">
+			<div class="row hot-words" ng-show="step.inputType != 'dtmf'">
 				<h4>{{'gatherStepHotWordsTextArea' | translate}}</h4>
-				<textarea ng-model='step.text' type="text" class="form-control" placeholder="{{'gatherStepRuleForHotWords' | translate}}"></textarea>
+				<textarea ng-model='step.hints' type="text" class="form-control" placeholder="{{'gatherStepHotWordsPlaceholder' | translate}}"></textarea>
 			</div>
 
 			<div class="row">
