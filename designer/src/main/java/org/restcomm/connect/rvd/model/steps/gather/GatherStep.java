@@ -136,6 +136,45 @@ public class GatherStep extends Step {
         return false;
     }
 
+    private String getPattern(final Interpreter interpreter) {
+        if (validation == null) {
+            return null;
+        }
+        String effectivePattern = null;
+        if (validation.userPattern != null) {
+            String expandedUserPattern = interpreter.populateVariables(validation.userPattern);
+            effectivePattern = "^[" + expandedUserPattern + "]$";
+        } else if (validation.regexPattern != null) {
+            String expandedRegexPattern = interpreter.populateVariables(validation.regexPattern);
+            effectivePattern = expandedRegexPattern;
+        } else {
+
+            RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", interpreter.getRvdContext().logging.getPrefix(), " Invalid validation information in gather. Validation object exists while other patterns are null"));
+        }
+        return effectivePattern;
+    }
+
+    private void putVariable(final Interpreter interpreter, final Collectdigits collect, String varName, String varValue) {
+        // is this an application-scoped variable ?
+        if ("application".equals(collect.scope)) {
+            interpreter.putStickyVariable(varName, varValue);
+        } else if ("module".equals(collect.scope)) {
+            interpreter.putModuleVariable(varName, varValue);
+        }
+
+        // in any case initialize the module-scoped variable
+        interpreter.getVariables().put(varName, varValue);
+    }
+
+    private boolean isValid(String pattern, String value, final LoggingContext logging) {
+        if (RvdLoggers.local.isTraceEnabled())
+            RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", "{0} validating '{1}' against '{}'", new Object[]{logging.getPrefix(), value, pattern}));
+        if (!value.matches(pattern)) {
+            return false;
+        }
+        return true;
+    }
+
     public void handleAction(Interpreter interpreter, Target originTarget) throws InterpreterException, StorageException {
         LoggingContext logging = interpreter.getRvdContext().logging;
         if (RvdLoggers.local.isEnabledFor(Level.INFO))
@@ -171,54 +210,46 @@ public class GatherStep extends Step {
             if (!handled)
                 valid = false;
         } else if ("collectdigits".equals(gatherType)) {
-            String variableName = collectdigits.collectVariable;
-            String currentSpeechValue = interpreter.getVariables().get(collectdigits.scope + "_" + variableName);
-            String variableValue = !InputType.parse(inputType).equals(InputType.DTMF) && StringUtils.isEmpty(digitsString) ? currentSpeechValue + " " + speechString : digitsString;
-            if (variableValue == null) {
+            String variableSpeechName = collectspeech.collectVariable;
+            String currentSpeechValue = interpreter.getVariables().get(collectspeech.scope + "_" + variableSpeechName);
+            String variableSpeechValue = currentSpeechValue != null ? currentSpeechValue : "";
+            if (speechString == null) {
+                RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Speech' parameter was null. Is this a valid restcomm request?"));
+            } else {
+                variableSpeechValue += " " + speechString;
+            }
 
+            String variableDigitsName = collectdigits.collectVariable;
+            String variableDigitsValue = digitsString;
+            if (variableDigitsValue == null) {
                 RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Digits' parameter was null. Is this a valid restcomm request?"));
-                variableValue = "";
+                variableDigitsValue = "";
             }
 
-            // validation
-            boolean doValidation = false;
-            if (validation != null) {
-                //if ( validation.pattern != null && !validation.pattern.trim().equals("")) {
-                String effectivePattern = null;
-                if (validation.userPattern != null) {
-                    String expandedUserPattern = interpreter.populateVariables(validation.userPattern);
-                    effectivePattern = "^[" + expandedUserPattern + "]$";
-                } else if (validation.regexPattern != null) {
-                    String expandedRegexPattern = interpreter.populateVariables(validation.regexPattern);
-                    effectivePattern = expandedRegexPattern;
-                } else {
-
-                    RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), " Invalid validation information in gather. Validation object exists while other patterns are null"));
-                }
-                if (effectivePattern != null) {
-                    doValidation = true;
-                    if (RvdLoggers.local.isTraceEnabled())
-                        RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", "{0} validating '{1}' against '{}'", new Object[]{logging.getPrefix(), variableValue, effectivePattern}));
-                    if (!variableValue.matches(effectivePattern))
-                        valid = false;
-                }
-            }
-
-            if (doValidation && !valid) {
+            //validation pattern
+            String effectivePattern = getPattern(interpreter);
+            // validation for digits
+            boolean validDigits = true;
+            if (effectivePattern != null && !isValid(effectivePattern, variableDigitsValue, logging)) {
+                validDigits = false;
                 if (RvdLoggers.local.isTraceEnabled())
                     RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
             } else {
-                // is this an application-scoped variable ?
-                if ("application".equals(collectdigits.scope)) {
-                    interpreter.putStickyVariable(variableName, variableValue);
-                } else if ("module".equals(collectdigits.scope)) {
-                    interpreter.putModuleVariable(variableName, variableValue);
-                }
-
-                // in any case initialize the module-scoped variable
-                interpreter.getVariables().put(variableName, variableValue);
+                putVariable(interpreter, collectdigits, variableDigitsName, variableDigitsValue);
                 interpreter.interpret(collectdigits.next, null, null, originTarget);
             }
+
+            // validation for speech
+            boolean validSpeech = true;
+            if (effectivePattern != null && !isValid(effectivePattern, variableSpeechValue.trim(), logging)) {
+                validSpeech = false;
+                if (RvdLoggers.local.isTraceEnabled())
+                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
+            } else {
+                putVariable(interpreter, collectspeech, variableSpeechName, variableSpeechValue.trim());
+                interpreter.interpret(collectspeech.next, null, null, originTarget);
+            }
+            valid = validDigits && validSpeech;
         }
 
         if (!valid) { // this should always be true
