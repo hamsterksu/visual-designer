@@ -170,6 +170,50 @@ public class GatherStep extends Step {
         return !StringUtils.isEmpty(value) && value.matches(pattern);
     }
 
+    private boolean handleDigitsCollect(final Interpreter interpreter, Target originTarget, String digitsString, String effectivePattern) throws StorageException, InterpreterException {
+        LoggingContext logging = interpreter.getRvdContext().logging;
+        String variableDigitsName = collectdigits.collectVariable;
+        String variableDigitsValue = digitsString;
+        if (variableDigitsValue == null) {
+            RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Digits' parameter was null. Is this a valid restcomm request?"));
+            variableDigitsValue = "";
+        }
+
+        // validation for digits
+        boolean validDigits = effectivePattern == null || isMatchesPattern(effectivePattern, variableDigitsValue, logging);
+        if (validDigits) {
+            putVariable(interpreter, collectdigits, variableDigitsName, variableDigitsValue);
+            interpreter.interpret(collectdigits.next, null, null, originTarget);
+        } else {
+            if (RvdLoggers.local.isTraceEnabled())
+                RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
+        }
+        return validDigits;
+    }
+
+    private boolean handleSpeechCollect(final Interpreter interpreter, Target originTarget, String speechString, String effectivePattern) throws StorageException, InterpreterException {
+        LoggingContext logging = interpreter.getRvdContext().logging;
+        String variableSpeechName = collectspeech.collectVariable;
+        String currentSpeechValue = interpreter.getVariables().get(collectspeech.scope + "_" + variableSpeechName);
+        String variableSpeechValue = currentSpeechValue != null ? currentSpeechValue : "";
+        if (speechString == null) {
+            RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Speech' parameter was null. Is this a valid restcomm request?"));
+        } else {
+            variableSpeechValue += " " + speechString;
+        }
+
+        // validation for speech
+        boolean validSpeech = (effectivePattern == null || isMatchesPattern(effectivePattern, variableSpeechValue.trim(), logging));
+        if (validSpeech) {
+            putVariable(interpreter, collectspeech, variableSpeechName, variableSpeechValue.trim());
+            interpreter.interpret(collectspeech.next, null, null, originTarget);
+        } else {
+            if (RvdLoggers.local.isTraceEnabled())
+                RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
+        }
+        return  validSpeech;
+    }
+
     public void handleAction(Interpreter interpreter, Target originTarget) throws InterpreterException, StorageException {
         LoggingContext logging = interpreter.getRvdContext().logging;
         if (RvdLoggers.local.isEnabledFor(Level.INFO))
@@ -197,48 +241,31 @@ public class GatherStep extends Step {
                         isValid = handleMapping(interpreter, originTarget, digitsString, menu.mappings, false);
                     } else if (!StringUtils.isEmpty(speechString)) {
                         isValid = handleMapping(interpreter, originTarget, speechString, menu.speechMapping, true);
+                    } else {
+                        isValid = false;
                     }
                     break;
             }
         } else if ("collectdigits".equals(gatherType)) {
-            String variableSpeechName = collectspeech.collectVariable;
-            String currentSpeechValue = interpreter.getVariables().get(collectspeech.scope + "_" + variableSpeechName);
-            String variableSpeechValue = currentSpeechValue != null ? currentSpeechValue : "";
-            if (speechString == null) {
-                RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Speech' parameter was null. Is this a valid restcomm request?"));
-            } else {
-                variableSpeechValue += " " + speechString;
-            }
-
-            String variableDigitsName = collectdigits.collectVariable;
-            String variableDigitsValue = digitsString;
-            if (variableDigitsValue == null) {
-                RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "'Digits' parameter was null. Is this a valid restcomm request?"));
-                variableDigitsValue = "";
-            }
-
             //validation pattern
             String effectivePattern = getPattern(interpreter);
-            // validation for digits
-            boolean validDigits = effectivePattern == null || isMatchesPattern(effectivePattern, variableDigitsValue, logging);
-            if (validDigits) {
-                putVariable(interpreter, collectdigits, variableDigitsName, variableDigitsValue);
-                interpreter.interpret(collectdigits.next, null, null, originTarget);
-            } else {
-                if (RvdLoggers.local.isTraceEnabled())
-                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
+            switch (inputTypeE) {
+                case DTMF:
+                    isValid = handleDigitsCollect(interpreter, originTarget, digitsString, effectivePattern);
+                    break;
+                case SPEECH:
+                    isValid = handleSpeechCollect(interpreter, originTarget, speechString, effectivePattern);
+                    break;
+                case DTMF_SPEECH:
+                    if (!StringUtils.isEmpty(digitsString)) {
+                        isValid = handleDigitsCollect(interpreter, originTarget, digitsString, effectivePattern);
+                    } else if (!StringUtils.isEmpty(speechString)) {
+                        isValid = handleSpeechCollect(interpreter, originTarget, speechString, effectivePattern);
+                    } else {
+                        isValid = false;
+                    }
+                    break;
             }
-
-            // validation for speech
-            boolean validSpeech = !validDigits && (effectivePattern == null || isMatchesPattern(effectivePattern, variableSpeechValue.trim(), logging));
-            if (validSpeech) {
-                putVariable(interpreter, collectspeech, variableSpeechName, variableSpeechValue.trim());
-                interpreter.interpret(collectspeech.next, null, null, originTarget);
-            } else {
-                if (RvdLoggers.local.isTraceEnabled())
-                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
-            }
-            isValid = inputTypeE == InputType.DTMF ? validDigits : inputTypeE == InputType.SPEECH ? validSpeech : validDigits || validSpeech;
         }
 
         if (!isValid) { // this should always be true
