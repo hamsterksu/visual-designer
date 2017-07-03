@@ -314,7 +314,6 @@ public class Interpreter {
 
 
     public String interpret(String targetParam, RcmlResponse rcmlModel, Step prependStep, Target originTarget ) throws InterpreterException, StorageException {
-        System.out.println("!!!!!!!!!!! " + targetParam);
         if (RvdLoggers.local.isTraceEnabled())
             RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(),"interpret", rvdContext.logging.getPrefix(), "starting interpeter for " + targetParam));
         if ( rvdContext.getProjectSettings().getLogging() )
@@ -331,11 +330,9 @@ public class Interpreter {
 
         if (target.action != null) {
             // Event handling
-            System.out.println("!!!!!!!!!!! target.action = " + target.action);
             loadStep(target.stepname).handleAction(this, target);
         } else {
             // RCML Generation
-            System.out.println("!!!!!!!!!!! RCML Generation");
             if (rcmlModel == null )
                 rcmlModel = new RcmlResponse();
             List<String> nodeStepnames = FsProjectStorage.loadNodeStepnames(appName, target.getNodename(), workspaceStorage);
@@ -372,7 +369,6 @@ public class Interpreter {
                 }
             }
             rcmlResult = xstream.toXML(rcmlModel);
-            System.out.println("!!!!!!!!!!! RCML Generation rcmlResult = " + rcmlResult);
         }
 
         return rcmlResult; // this is in case of an error

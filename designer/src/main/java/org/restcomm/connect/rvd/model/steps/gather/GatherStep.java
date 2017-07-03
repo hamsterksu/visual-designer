@@ -118,14 +118,15 @@ public class GatherStep extends Step {
         return rcmlStep;
     }
 
-    private boolean handleMaping(Interpreter interpreter, Target originTarget, String key, List<Mapping> mappings, boolean isPattern) throws StorageException, InterpreterException {
+    private boolean handleMapping(Interpreter interpreter, Target originTarget, String key, List<Mapping> mappings, boolean isPattern) throws StorageException, InterpreterException {
         LoggingContext logging = interpreter.getRvdContext().logging;
         for (Mapping mapping : mappings) {
 
             if (RvdLoggers.local.isTraceEnabled())
                 RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", "{0} checking key: {1} - {2}", new Object[]{logging.getPrefix(), mapping.key, key}));
 
-            if (mapping.key != null && (!isPattern && mapping.key.equals(key) || isPattern && Pattern.matches(mapping.key, key))) {
+            //mapping.key is not null always
+            if (!isPattern && mapping.key.equals(key) || isPattern && Pattern.matches(mapping.key, key)) {
                 // seems we found out menu selection
                 if (RvdLoggers.local.isTraceEnabled())
                     RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), " seems we found our menu selection: " + key));
@@ -142,13 +143,10 @@ public class GatherStep extends Step {
         }
         String effectivePattern = null;
         if (validation.userPattern != null) {
-            String expandedUserPattern = interpreter.populateVariables(validation.userPattern);
-            effectivePattern = "^[" + expandedUserPattern + "]$";
+            effectivePattern = "^[" + interpreter.populateVariables(validation.userPattern) + "]$";
         } else if (validation.regexPattern != null) {
-            String expandedRegexPattern = interpreter.populateVariables(validation.regexPattern);
-            effectivePattern = expandedRegexPattern;
+            effectivePattern = interpreter.populateVariables(validation.regexPattern);
         } else {
-
             RvdLoggers.local.log(Level.WARN, LoggingHelper.buildMessage(getClass(), "handleAction", interpreter.getRvdContext().logging.getPrefix(), " Invalid validation information in gather. Validation object exists while other patterns are null"));
         }
         return effectivePattern;
@@ -166,13 +164,10 @@ public class GatherStep extends Step {
         interpreter.getVariables().put(varName, varValue);
     }
 
-    private boolean isValid(String pattern, String value, final LoggingContext logging) {
+    private boolean isMatchesPattern(String pattern, String value, final LoggingContext logging) {
         if (RvdLoggers.local.isTraceEnabled())
             RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", "{0} validating '{1}' against '{}'", new Object[]{logging.getPrefix(), value, pattern}));
-        if (!value.matches(pattern)) {
-            return false;
-        }
-        return true;
+        return !StringUtils.isEmpty(value) && value.matches(pattern);
     }
 
     public void handleAction(Interpreter interpreter, Target originTarget) throws InterpreterException, StorageException {
@@ -182,33 +177,29 @@ public class GatherStep extends Step {
 
         String digitsString = interpreter.getRequestParams().getFirst("Digits");
         String speechString = interpreter.getRequestParams().getFirst("Speech");
-        System.out.println("!!! GatherStep.handleAction: digitsString = " + digitsString + "; speechString = " + speechString);
         if (digitsString != null)
             interpreter.getVariables().put(RvdConfiguration.CORE_VARIABLE_PREFIX + "Digits", digitsString);
         if (speechString != null)
             interpreter.getVariables().put(RvdConfiguration.CORE_VARIABLE_PREFIX + "Speech", speechString);
 
-        boolean valid = true;
-
+        boolean isValid = true;
+        InputType inputTypeE = InputType.parse(inputType);
         if ("menu".equals(gatherType)) {
-            boolean handled = false;
-            switch (InputType.parse(inputType)) {
+            switch (inputTypeE) {
                 case DTMF:
-                    handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings, false);
+                    isValid = handleMapping(interpreter, originTarget, digitsString, menu.mappings, false);
                     break;
                 case SPEECH:
-                    handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping, true);
+                    isValid = handleMapping(interpreter, originTarget, speechString, menu.speechMapping, true);
                     break;
                 case DTMF_SPEECH:
                     if (!StringUtils.isEmpty(digitsString)) {
-                        handled = handleMaping(interpreter, originTarget, digitsString, menu.mappings, false);
+                        isValid = handleMapping(interpreter, originTarget, digitsString, menu.mappings, false);
                     } else if (!StringUtils.isEmpty(speechString)) {
-                        handled = handleMaping(interpreter, originTarget, speechString, menu.speechMapping, true);
+                        isValid = handleMapping(interpreter, originTarget, speechString, menu.speechMapping, true);
                     }
                     break;
             }
-            if (!handled)
-                valid = false;
         } else if ("collectdigits".equals(gatherType)) {
             String variableSpeechName = collectspeech.collectVariable;
             String currentSpeechValue = interpreter.getVariables().get(collectspeech.scope + "_" + variableSpeechName);
@@ -229,30 +220,28 @@ public class GatherStep extends Step {
             //validation pattern
             String effectivePattern = getPattern(interpreter);
             // validation for digits
-            boolean validDigits = true;
-            if (effectivePattern != null && !isValid(effectivePattern, variableDigitsValue, logging)) {
-                validDigits = false;
-                if (RvdLoggers.local.isTraceEnabled())
-                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
-            } else {
+            boolean validDigits = effectivePattern == null || isMatchesPattern(effectivePattern, variableDigitsValue, logging);
+            if (validDigits) {
                 putVariable(interpreter, collectdigits, variableDigitsName, variableDigitsValue);
                 interpreter.interpret(collectdigits.next, null, null, originTarget);
+            } else {
+                if (RvdLoggers.local.isTraceEnabled())
+                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
             }
 
             // validation for speech
-            boolean validSpeech = true;
-            if (effectivePattern != null && !isValid(effectivePattern, variableSpeechValue.trim(), logging)) {
-                validSpeech = false;
-                if (RvdLoggers.local.isTraceEnabled())
-                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
-            } else {
+            boolean validSpeech = !validDigits && (effectivePattern == null || isMatchesPattern(effectivePattern, variableSpeechValue.trim(), logging));
+            if (validSpeech) {
                 putVariable(interpreter, collectspeech, variableSpeechName, variableSpeechValue.trim());
                 interpreter.interpret(collectspeech.next, null, null, originTarget);
+            } else {
+                if (RvdLoggers.local.isTraceEnabled())
+                    RvdLoggers.local.log(Level.TRACE, LoggingHelper.buildMessage(getClass(), "handleAction", logging.getPrefix(), "{0} Invalid input for gather/collectdigits. Will say the validation message and rerun the gather"));
             }
-            valid = validDigits && validSpeech;
+            isValid = inputTypeE == InputType.DTMF ? validDigits : inputTypeE == InputType.SPEECH ? validSpeech : validDigits || validSpeech;
         }
 
-        if (!valid) { // this should always be true
+        if (!isValid) { // this should always be true
             interpreter.interpret(interpreter.getTarget().getNodename() + "." + interpreter.getTarget().getStepname(), null, (invalidMessage != null) ? invalidMessage : null, originTarget);
         }
     }
