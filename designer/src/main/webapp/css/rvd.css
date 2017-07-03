@@ -1024,4 +1024,14 @@ textarea.medium {
 .marker-arrowhead { display: none }
 .marker-vertices { display: none }
 
+.asr-input-type-box {
+    margin: 15px 0 15px 15px;
+}
 
+.hot-words {
+    margin: 0 0 15px 0;
+}
+
+.asr-collect {
+    margin-left: 15px;
+}

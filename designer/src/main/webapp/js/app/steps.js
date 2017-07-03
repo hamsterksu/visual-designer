@@ -177,9 +177,6 @@ angular.module('Rvd')
 		else
 		if (clone.gatherType == "collectdigits")
 			delete clone.menu;
-		else
-		if (clone.gatherType == "collectspeech")
-			delete clone.menu;
 		if (!clone.validation.userPattern && !clone.validation.regexPattern)
 			delete clone.validation;
 		if (clone.invalidMessage.phrase == "")
